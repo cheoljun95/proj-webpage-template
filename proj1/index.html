@@ -1,7 +1,38 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
-</html>
+<p style="text-align: center;">2023 Spring CS284 HW1 Report</p>
+<p style="text-align: center;">Cheol Jun Cho</p>
+<p style="text-align: center;">cheoljun@berkeley.edu</p>
+<p><strong>Task 1</strong></p>
+<p>The basic implementation is applying point-in-triangle test (three line tests) on each point in the bounding box of a given triangle. Since the order of the points is arbitrary, line tests on one of three vertices over the line by the other two are done to determine the sign value indicating whether the line-tested point is inside or outside. Thus, for each point in the bounding box, the line test over a certain edge of the triangle is passed if the sign of the test is the same as the sign of the edge as mentioned above. When get all three passes for three edges, the point is regarded as in the triangle. The bounding box is determined by min/max of the vertices&rsquo; x, y coordinates. The test4.svg result shows the triangles are rasterized correctly, but with jaggies on the slopes.</p>
+
+<p style="text-align:center;"><img src=https://raw.githubusercontent.com/cheoljun95/proj-webpage-template/master/proj1/img/c284_hw1_task1.png></p>
+
+
+<p><strong>Task 2</strong></p>
+<p>To enable supersampling, I modified fill_pixel, rasterize_triangle, sample_buffer size, and resolve_to_framebuffer. The sample_buffer size is resized to width * height * sample_rate in set_sample_rate function. For each sample in super-sampling is indexed by sample_buffer[width*height*s +x + width*y], and fill_pixel is modified accordingly. Since lines and points are not supersampled, the buffer is filled with the same values for all supersamples for lines and points, so having no effect of supersampling. The rasterize_triangle now has another layer of loop to iterate through samples with finer-grained x,y coordinates. In resolve_to_framebuffer, the colors in supersamples are averaged and loaded to rgb_framebuffer_target. Supersampling is useful because it smoothens jaggies away by incorporating pixels on the boundaries in a somewhat continuous way.&nbsp;</p>
+
+<p style="text-align:center;"><img src=https://raw.githubusercontent.com/cheoljun95/proj-webpage-template/master/proj1/img/c284_hw1_task2.png></p>
+
+<p>As shown in test4.svg, the sharpest triangle at the corner has even an island at the tip without supersampling. By increasing the sampling rate from 1 to 16, the overall triangles get smoother and the jaggies are mitigated and the island is gone.&nbsp;</p>
+
+
+<p><strong>Task 3</strong></p>
+<p>The default pose (left: robot.svg) and a running pose (right: my_robot.svg) of the robot with transform implementation.&nbsp;</p>
+<p style="text-align:center;"><img src=https://raw.githubusercontent.com/cheoljun95/proj-webpage-template/master/proj1/img/c284_hw1_task3.png></p>
+
+
+<p><strong>Task 4</strong></p>
+<p>Barycentric coordinates are the ratios of the distances from vertices that interpolate values fo the vertices. The ratio of a vertex is determined by the ratio of the distance projected to the vertical line from that vertex to the line by the other two vertices. The barycentric coordinates can be visualized as the left figure below. Red, green, and blue are assigned to vertices and each point in the triangle blends rgb color by its barycentric coordinates.&nbsp; The right figure is the result of test7.svg</p>
+
+<p style="text-align:center;"><img src=https://raw.githubusercontent.com/cheoljun95/proj-webpage-template/master/proj1/img/c284_hw1_task4.png></p>
+
+<p><strong>Task 5</strong></p>
+<p>Before texture sampling, the coordinates, (u, v) in the texture map are calculated by the barycentric coordinates of a point in the triangle are obtained. To this end, the implementation is based on rasterization (Task 1,2) and barycentric coordinates (Task 4). After getting the (u, v), the four nearest discrete points in the texture map are considered: (floor(u), floor(v)), (floor(u)+1, floor(v)), (floor(u), floor(v)+1), and (floor(u)+1, floor(v)+1). The nearest sampling is done by choosing the nearest one from these and bilinear interpolation is done by interpolating values of these four points by the relative location of (u, v) in this square. As the nearest sampling is maxing out only one point, it can cause jaggies and non-smooth texture mapping, while the bilinear interpolation has smoother mapping.&nbsp;</p>
+
+<p style="text-align:center;"><img src=https://raw.githubusercontent.com/cheoljun95/proj-webpage-template/master/proj1/img/c284_hw1_task5.png></p>
+
+<p>As shown in the above table of figures, the nearest sampling with the sampling rate of 1 (top-left) results in alias, the disconnected white lines. These are somewhat corrected with bilinear sampling (top-right), but the vertical lines are still disconnected. These are mitigated by supersampling, since they are anti-aliased in x-y space. Thus, difference between the nearest sampling and bilinear sampling is relatively subtle for the sampling rate of 16.</p>
+<p><strong>Task 6</strong></p>
+<p>In addition to Task 5, the level is estimated by the magnitude of derivatives. The barycentric coordinates of (x+1,y) and (x,y+1) are obtained and the corresponding values of u-v space are calculated. The mipmap level, D, is estimated by log 2 of the magnitude of the difference from (u, v) in u-v space (greater one from (x+1,y) or from (x,y+1)). Here, the nearest mapping is&nbsp; done by choosing the closest discrete level values, and the linear interpolation is interpolating samples from the adjacent levels (floor(D) and floor(D)+1) by D&rsquo;s relative position between those levels. Other parts are identical to Task 5.&nbsp;&nbsp;</p>
+<p>By adding the level sampling, the computation cost are multiplied by 2~3, by calculating two more points of barycentric coordinates and accessing two levels of texture map. However, it is much cheaper than supersampling since the implementation of supersampling here requires N times more memories and computations for the sampling rate of N. Thus, level sampling offers more efficient anti-aliased texture mapping. The nearest sampling is faster than bilinear sampling since choosing one of 4 adjacent points is cheaper than calculating all over those 4 points. However with out level sampling, the nearest sampling shows severe aliasing. The below table of figures demonstrates the effect of mipmap level sampling. Compared to L_ZERO, the aliasing is gone in L_NEAREST and L_LINEAR in both P_NEAREST and P_LINEAR.&nbsp;</p>
+
+<p style="text-align:center;"><img src=https://raw.githubusercontent.com/cheoljun95/proj-webpage-template/master/proj1/img/c284_hw1_task6.png></p>
